@@ -15,20 +15,20 @@ ENTRY_DIFF = 100                        # エントリー価格(現在価格に�
 PROFIT_DIFF = 189                       # 利確幅
 STOP_LOSS_DIFF = 150                    # 損切り幅
 WAIT_AFTER_NOT_ENTRY = 15               # エントリー否定と損切り後に指定した秒数休憩
-WAIT_AFTER_STOP_LOSS = 180              # 損切りした後エントリー判定を始めるまでの秒数
-WAIT_AFTER_CACEL     = 10               # 注文をキャンセルしてから再度判定を始めるまでの秒数
+WAIT_AFTER_ORDER_DONE = 10              # 利確・損切りした後再度エントリー判定を始めるまでの秒数
+WAIT_AFTER_CANCEL     = 10              # 注文をキャンセルしてから再度判定を始めるまでの秒数
 LOT = 0.001                             # 取引LOT[BTC]
 
 
 # ---- 定数 ----
 LOOP_WAIT_SEC = 5  # 何秒ごとにループを回すか（間隔が短すぎると怒られるので3秒ぐらいかな）
-ORDER_CANCEL_SEC = 30
+ORDER_CANCEL_SEC = 30   # オーダーを出してから何秒間約定しなければキャンセルするか
 STOP_LOSS_WAIT_SEC = 30  # 損切り後にwaitを入れる
 
 # ---- グローバル変数 ----
 order_id = ''  # オーダーID
 wait_order_count = 0  # 注文を出してから、ループ何回分役定していないか
-
+is_order_success = False
 # ---- 関数 ----
 
 
@@ -48,18 +48,24 @@ def exit_program():
 
     cancel_all_orders()
 
-
-# 全オーダーをキャンセル
-def cancel_all_orders():
-    exchangeFunc.cancel_all_orders()
-
+# パラメータの初期化
+def init_param():
     global order_id
     order_id = ''
 
     global wait_order_count
     wait_order_count = 0
+    
+    global is_order_success
+    is_order_success = False
+    
+# 全オーダーをキャンセル
+def cancel_all_orders():
+    exchangeFunc.cancel_all_orders()
+    init_param()
+    
 
-# botが売買注文を出す
+# botが売買注文を出すs
 def bot_buy_and_sell(last_price):
     is_buy = False
     is_sell = False
@@ -133,7 +139,6 @@ def bot_buy_and_sell(last_price):
     order_id = exchangeFunc.create_ifdoco_order(is_buy, LOT, price, profit_order_price, stop_loss_order_price)
     return price
 
-
 # ---- メインループ ----
 while True:
     key = func.get_key()
@@ -146,22 +151,37 @@ while True:
     last_price = exchangeFunc.get_last_price()
     open_order_count = exchangeFunc.fetch_open_orders()
     order_size = exchangeFunc.get_current_order_size(order_id)
+
+    if is_order_success == False and order_size > 0:
+        # 注文が通った
+        func.print_format("--- 注文確定 ---")
+        is_order_success = True
     
     # 売買注文を出す
-    if open_order_count == 0 and order_size == 0:
-        if order_id == '':
+
+    if order_id == '':
+        if open_order_count == 0 and order_size == 0:
             order_id = bot_buy_and_sell(last_price)
-        else:
-            # 注文中の時の処理
+    else:
+        if is_order_success == True:
+            # 注文が通った場合の処理
+            if order_size == 0:
+                func.print_format("--- 利確・損切り(TODO: 今回いくら勝ったとか、合計収支とか出す)---")
+                
+                # 利確or損切りまで済んでいたら再度注文が発生する状態に初期化
+                init_param()
+                time.sleep(WAIT_AFTER_ORDER_DONE)
+                continue
+        
+        else:        
+            # 注文が通っていない時の処理
+            
             wait_order_count += 1
             if wait_order_count * LOOP_WAIT_SEC >= ORDER_CANCEL_SEC:
                 # 一定時間オーダーが通らなかったらキャンセル
-                print("--- cancel order ---")
+                func.print_format("--- cancel order ---")
                 cancel_all_orders()
-                time.sleep(WAIT_AFTER_CACEL)
-                continue
-            else:
-                time.sleep(LOOP_WAIT_SEC)
+                time.sleep(WAIT_AFTER_CANCEL)
                 continue
 
     # ループ間隔

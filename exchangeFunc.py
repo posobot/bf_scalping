@@ -202,10 +202,13 @@ def cancel_order(orderId, retry_count=0):
 
 
 def cancel_all_orders(retry_count=0):
-    orders = fetch_open_order()
-    for order in orders:
-        if order['remaining'] > 0:
-            cancel_order(order['id'])
+    if TRADE_EXCHANGE == EXCHANGE_BITMEX:
+        orders = fetch_open_order()
+        for order in orders:
+            if order['remaining'] > 0:
+                cancel_order(order['id'])
+    elif TRADE_EXCHANGE == EXCHANGE_BITFLYER:
+        exchange.private_post_cancelallchildorders(params = { "product_code" : TRADE_PAIR})
 
 def fetch_open_orders():
     if TRADE_EXCHANGE == EXCHANGE_BITFLYER:
