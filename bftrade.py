@@ -6,6 +6,7 @@ import func
 from datetime import datetime
 from exchangeFunc import TIME_FRAME
 
+
 # ---- 1分足スキャbot用 ----
 SMA_COUNT = 7                           # 1分足何本分の平均価格を使うか
 NO_ENTRY_DIFF_FROM_SMA = 1500           # 平均価格と現在価格がこれだけ離れていたらNO ENTRY
