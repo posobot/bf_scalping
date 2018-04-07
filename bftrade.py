@@ -24,22 +24,6 @@ LOT                                 = config['LOT']                             
 LOOP_WAIT_SEC                       = config['LOOP_WAIT_SEC']                   # 何秒ごとにループを回すか（間隔が短すぎると怒られるので3秒ぐらいかな）
 ORDER_CANCEL_SEC                    = config['ORDER_CANCEL_SEC']                # オーダーを出してから何秒間約定しなければキャンセルするか
 
-# debug出力
-dict = {
-    "SMA_COUNT" : SMA_COUNT,
-    "NO_ENTRY_DIFF_FROM_SMA" : NO_ENTRY_DIFF_FROM_SMA,
-    "NO_ENTRY_DIFF_FROM_LATEST_MEDIAN" : NO_ENTRY_DIFF_FROM_LATEST_MEDIAN,
-    "ENTRY_DIFF" : ENTRY_DIFF,
-    "PROFIT_DIFF" : PROFIT_DIFF,
-    "STOP_LOSS_DIFF" : STOP_LOSS_DIFF,
-    "WAIT_AFTER_NOT_ENTRY" : WAIT_AFTER_NOT_ENTRY,
-    "WAIT_AFTER_ORDER_DONE" : WAIT_AFTER_ORDER_DONE,
-    "WAIT_AFTER_CANCEL" : WAIT_AFTER_CANCEL,
-    "LOT" : LOT,
-    "LOOP_WAIT_SEC" : LOOP_WAIT_SEC,
-    "ORDER_CANCEL_SEC" : ORDER_CANCEL_SEC
-}
-func.print_format_bulk(dict)
 
 # ---- グローバル変数 ----
 order_id = ''  # オーダーID
@@ -50,18 +34,6 @@ is_order_success = False
 
 # S キーを押して強制停止した時にポジションがあれば成り行きで手放す
 def exit_program():
-    size = exchangeFunc.get_current_order_size()
-    print("exit market trade:" + str(size))
-    if size > 0:
-        print(' exit Sell! #############')
-        # 成り行きで売る
-        exchangeFunc.market_sell(abs(size))
-
-    elif size < 0:
-        print(' exit Buy! #############')
-        # 成り行きで買う
-        exchangeFunc.market_buy(abs(size))
-
     cancel_all_orders()
 
 # パラメータの初期化
@@ -77,7 +49,23 @@ def init_param():
     
 # 全オーダーをキャンセル
 def cancel_all_orders():
+    func.print_format("--- cancel order ---")
+    print("")
+    
+    # オーダーキャンセル
     exchangeFunc.cancel_all_orders()
+    
+    # すこし時間を置いてからオーダーの解消判定
+    time.sleep(0.5)
+    # もしポジションを持っていたら成行で解消
+    order_size = exchangeFunc.get_current_order_size()
+    if order_size > 0:
+        func.print_format("--- 成行売りでポジション解消:" + str(order_size) + "---")
+        exchangeFunc.market_sell(abs(order_size))
+    elif order_size < 0:
+        func.print_format("--- 成行買いでポジション解消:" + str(order_size) + "---")
+        exchangeFunc.market_buy(abs(order_size))
+    
     init_param()
     
 
@@ -111,11 +99,13 @@ def bot_buy_and_sell(last_price):
 
     if diff_sma > NO_ENTRY_DIFF_FROM_SMA:
         # 平均価格と現在価格が離れすぎていたらエントリーしない
+        func.print_format("---　平均価格 " + str(NO_ENTRY_DIFF_FROM_SMA) + " < " + str(diff_sma) +" 現在価格が乖離、NOエントリー --- ") #yasuo
         time.sleep(WAIT_AFTER_NOT_ENTRY)
         return
 
     if diff_median > NO_ENTRY_DIFF_FROM_LATEST_MEDIAN:
         # 前回中央値と現在価格が離れすぎていたらエントリーしない
+        func.print_format("---　前回中央値 " + str(NO_ENTRY_DIFF_FROM_LATEST_MEDIAN) + " < " + str(diff_median) +" 現在価格が乖離、NOエントリー --- ") #yasuo
         time.sleep(WAIT_AFTER_NOT_ENTRY)
         return
 
@@ -126,7 +116,8 @@ def bot_buy_and_sell(last_price):
     is_buy = True
     if last_price <= sma:
         # -- ショート --
-        func.print_format("---SELL SIGN---")
+        print("")
+        func.print_format("---  ▼ SELL SIGN ▼ ---")
         
         is_buy = False
         price = last_price + ENTRY_DIFF
@@ -136,7 +127,8 @@ def bot_buy_and_sell(last_price):
         stop_loss_order_price = price + STOP_LOSS_DIFF
     elif last_price > sma:
         # -- ロング --
-        func.print_format("---BUY SIGN---")
+        print("")
+        func.print_format("---  △ BUY SIGN  △---")
         
         price = last_price - ENTRY_DIFF
         # 利確金額を決める
@@ -144,13 +136,6 @@ def bot_buy_and_sell(last_price):
         # 損切金額を決める
         stop_loss_order_price = price - STOP_LOSS_DIFF
         
-        dict = {
-            "price" : str(price),
-            "profit_order_price" : str(profit_order_price),
-            "stop_loss_order_price" : str(stop_loss_order_price)
-        }
-        func.print_format_bulk(dict)
-    
     # BFではIFDOCOで注文を出す
     order_id = exchangeFunc.create_ifdoco_order(is_buy, LOT, price, profit_order_price, stop_loss_order_price)
     return price
@@ -162,13 +147,25 @@ while True:
     if key == 115:  # 's' の入力
         exit_program()
         sys.exit()
+        
+    if exchangeFunc.can_trade() == False:
+        # BFがVERY BUSY以上の時はトレードしない
+        time.sleep(60)
+        continue
 
     # 最終取引価格を取得
     last_price = exchangeFunc.get_last_price()
     open_order_count = exchangeFunc.fetch_open_orders()
-    order_size = exchangeFunc.get_current_order_size(order_id)
+    order_size = exchangeFunc.get_current_order_size()
+    
+    if open_order_count == 0 and order_size != 0:
+        # 縦玉注文だけが残っている状態を解消
+        func.print_format("--- 縦玉注文だけが残っている状態を解消 ---")
+        cancel_all_orders()
+        time.sleep(LOOP_WAIT_SEC)
+        continue
 
-    if is_order_success == False and order_size > 0:
+    if is_order_success == False and order_size != 0:
         # 注文が通った
         func.print_format("--- 注文確定 ---")
         is_order_success = True
@@ -195,7 +192,6 @@ while True:
             wait_order_count += 1
             if wait_order_count * LOOP_WAIT_SEC >= ORDER_CANCEL_SEC:
                 # 一定時間オーダーが通らなかったらキャンセル
-                func.print_format("--- cancel order ---")
                 cancel_all_orders()
                 time.sleep(WAIT_AFTER_CANCEL)
                 continue

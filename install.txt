@@ -1,0 +1,6 @@
+bftradeに必要なinstall
+
+sudo pip-3.6 install ccxt
+sudo pip-3.6 install requests
+sudo pip-3.6 install pytz
+sudo pip-3.6 install pyyaml

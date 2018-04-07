@@ -1,35 +1,25 @@
-# --- 取引所設定 ---
-isreal: # 本番=1, testnet=0 ※bitflyerは本番のみ
-    1
-exchange: # 取引所設定 'bitmex' = 1 , 'bitflyer' = 2
-    2
-apikey: 
-    ''
-secret: 
-    ''
-    
 # --- スキャbot設定 ---
-SMA_COUNT: 
+SMA_COUNT:                          # 1分足何本分の平均価格を使うか
     3
-NO_ENTRY_DIFF_FROM_SMA:
-    1500
-NO_ENTRY_DIFF_FROM_LATEST_MEDIAN:
-    1000
-ENTRY_DIFF:
-    50
-PROFIT_DIFF:
+NO_ENTRY_DIFF_FROM_SMA:             # 平均価格と現在価格がこれだけ離れていたらNO ENTRY
+    6500
+NO_ENTRY_DIFF_FROM_LATEST_MEDIAN:   # 前回の足の中央値と現在価格がこれだけ離れていたらNO ENTRY
+    4500
+ENTRY_DIFF:                         # エントリー価格(現在価格に±して使う)
+    -100
+PROFIT_DIFF:                        # 利確幅
     200
-STOP_LOSS_DIFF:
+STOP_LOSS_DIFF:                     # 損切り幅
     200
-WAIT_AFTER_NOT_ENTRY:
+WAIT_AFTER_NOT_ENTRY:               # エントリー否定と損切り後に指定した秒数休憩
     5
-WAIT_AFTER_ORDER_DONE:
-    10
-WAIT_AFTER_CANCEL:
-    10
-LOT:
+WAIT_AFTER_ORDER_DONE:              # 利確・損切りした後再度エントリー判定を始めるまでの秒数
+    5
+WAIT_AFTER_CANCEL:                  # 注文をキャンセルしてから再度判定を始めるまでの秒数
+    1
+LOT:                                # 取引LOT[BTC]
     0.001
-LOOP_WAIT_SEC:
-    5
-ORDER_CANCEL_SEC:
-    30
+LOOP_WAIT_SEC:                      # 何秒ごとにループを回すか（間隔が短すぎると怒られるので3秒ぐらいかな）
+    1
+ORDER_CANCEL_SEC:                   # オーダーを出してから何秒間約定しなければキャンセルするか
+    20

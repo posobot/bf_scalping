@@ -1,0 +1,9 @@
+# --- 取引所設定 ---
+isreal: # 本番=1, testnet=0 ※bitflyerは本番のみ
+    1
+exchange: # 取引所設定 'bitmex' = 1 , 'bitflyer' = 2
+    2
+apikey: 
+    ''
+secret: 
+    ''

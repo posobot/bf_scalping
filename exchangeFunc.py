@@ -2,8 +2,9 @@ import time
 import ccxt
 import requests
 import sys
+import func
 import yaml
-with open('config.yml', 'r') as yml:
+with open('exchangeconfig.yml', 'r') as yml:
     config = yaml.load(yml)
  
 print('exchange: ', config['exchange'])
@@ -89,12 +90,33 @@ else:
             "secret": config['secret'],
         })
 
-
+def can_trade(retry_count=0):
+    if is_bitflyer() == False:
+        # BFのみ対応
+        print("get_exchange_state not support")
+        sys.exit()
+        
+    try:
+        response = exchange.public_get_gethealth(params = { "product_code" : TRADE_PAIR })
+    except Exception as e:
+        print(e)
+        if retry_count < API_RETRY_MAX:
+            time.sleep(RETRY_WAIT)
+            can_trade(retry_count + 1)
+        else:
+            raise
+    
+    if response['status'] == 'NORMAL' or response['status'] == 'BUSY':
+        return True
+    
+    print("bitflyer status is :" + response['status'])
+    return False
 # 指値買い
 def limit_buy(price, size, retry_count=0):
     try:
         order = exchange.create_order(TRADE_PAIR, type='limit', side='buy', price=price, amount=size)
-    except Exception:
+    except Exception as e:
+        print(e)
         if retry_count < API_RETRY_MAX:
             time.sleep(RETRY_WAIT)
             limit_buy(price, size, retry_count + 1)
@@ -110,7 +132,8 @@ def limit_buy(price, size, retry_count=0):
 def limit_sell(price, size, retry_count=0):
     try:
         order = exchange.create_order(TRADE_PAIR, type='limit', side='sell', price=price, amount=size)
-    except Exception:
+    except Exception as e:
+        print(e)
         if retry_count < API_RETRY_MAX:
             time.sleep(RETRY_WAIT)
             limit_sell(price, size, retry_count + 1)
@@ -126,7 +149,8 @@ def limit_sell(price, size, retry_count=0):
 def market_buy(size, retry_count=0):
     try:
         order = exchange.create_order(TRADE_PAIR, type='market', side='buy', amount=size)
-    except Exception:
+    except Exception as e:
+        print(e)
         if retry_count < API_RETRY_MAX:
             time.sleep(RETRY_WAIT)
             market_buy(retry_count + 1)
@@ -140,7 +164,8 @@ def market_buy(size, retry_count=0):
 def market_sell(size, retry_count=0):
     try:
         order = exchange.create_order(TRADE_PAIR, type='market', side='sell', amount=size)
-    except Exception:
+    except Exception as e:
+        print(e)
         if retry_count < API_RETRY_MAX:
             time.sleep(RETRY_WAIT)
             market_sell(retry_count + 1)
@@ -153,7 +178,8 @@ def market_sell(size, retry_count=0):
 def fetch_order(orderId, retry_count=0):
     try:
         return exchange.fetch_order(orderId, TRADE_PAIR)
-    except Exception:
+    except Exception as e:
+        print(e)
         if retry_count < API_RETRY_MAX:
             time.sleep(RETRY_WAIT)
             fetch_order(orderId, retry_count + 1)
@@ -164,7 +190,8 @@ def fetch_order(orderId, retry_count=0):
 def fetch_orders(retry_count=0):
     try:
         orders = exchange.fetch_orders(TRADE_PAIR)
-    except Exception:
+    except Exception as e:
+        print(e)
         if retry_count < API_RETRY_MAX:
             time.sleep(RETRY_WAIT)
             fetch_orders(retry_count + 1)
@@ -177,7 +204,8 @@ def fetch_orders(retry_count=0):
 def fetch_open_order(retry_count=0):
     try:
         orders = exchange.fetch_open_orders(TRADE_PAIR)
-    except Exception:
+    except Exception as e:
+        print(e)
         if retry_count < API_RETRY_MAX:
             time.sleep(RETRY_WAIT)
             fetch_open_order(retry_count + 1)
@@ -197,7 +225,8 @@ def cancel_order(orderId, retry_count=0):
         orders = exchange.cancel_order(orderId, TRADE_PAIR)
     except ccxt.base.errors.OrderNotFound:
         print("order cancel済")
-    except Exception:
+    except Exception as e:
+        print(e)
         if retry_count < API_RETRY_MAX:
             time.sleep(RETRY_WAIT)
             cancel_order(orderId, retry_count + 1)
@@ -219,23 +248,33 @@ def fetch_open_orders():
         orders = exchange.private_get_getparentorders(params = { "product_code" : TRADE_PAIR, "parent_order_state" : "ACTIVE" })
         return len(orders)
 
-def get_current_order_size(orderId=None, retry_count=0):
-    if TRADE_EXCHANGE == EXCHANGE_BITMEX:
-        pos_list = exchange.private_get_positions()
-        for pos in pos_list:
-            if pos['symbol'] == 'XBTUSD':
-                return pos['currentQty']
+def get_current_order_size(retry_count=0):
+    try:
+        if TRADE_EXCHANGE == EXCHANGE_BITMEX:
+            pos_list = exchange.private_get_positions()
+            for pos in pos_list:
+                if pos['symbol'] == 'XBTUSD':
+                    return pos['currentQty']
+                
+        elif TRADE_EXCHANGE == EXCHANGE_BITFLYER:
+            pos_list = exchange.private_get_getpositions(params = { "product_code" : TRADE_PAIR })
             
-    elif TRADE_EXCHANGE == EXCHANGE_BITFLYER:
-        pos_list = exchange.private_get_getpositions(params = { "product_code" : TRADE_PAIR })
-        
-        size = 0
-        
-        for pos in pos_list:
-            size += pos['size']
-        
-        return size
-        
+            size = 0
+            
+            for pos in pos_list:
+                if pos['side'] == 'BUY':
+                    size += pos['size']
+                else:
+                    size -= pos['size']
+            
+            return size
+    except Exception as e:       
+        print(e)
+        if retry_count < 0:
+            time.sleep(RETRY_WAIT)
+            get_current_order_size(retry_count + 1)
+        else:
+            raise  
     
     return 0
 
@@ -358,7 +397,6 @@ def create_ifdoco_order(is_buy, order_size, ifd_price, profit_price, stop_loss_p
         other_side = "BUY"
         
     try:
-        
         parent_id = exchange.private_post_sendparentorder(params = {
                 "order_method" : "IFDOCO", 
                 "minute_to_expire" : 10000, 
@@ -390,11 +428,19 @@ def create_ifdoco_order(is_buy, order_size, ifd_price, profit_price, stop_loss_p
             }
         )
         # order_id = exchange.private_get_getparentorder(params = {"parent_order_acceptance_id" : parent_id})
-    except Exception:        
+    except Exception as e:       
+        print(e)
         if retry_count < 0:
             time.sleep(RETRY_WAIT)
             create_ifdoco_order(is_buy, order_size, ifd_price, profit_price, stop_loss_price, retry_count + 1)
         else:
             raise
     
+    dict = {
+        'IFDOCO注文:' : '',
+        'price' : ifd_price, 
+        'profit_price' : profit_price, 
+        'stop_loss_price' : stop_loss_price
+    }
+    func.print_format_bulk(dict)
     return parent_id['parent_order_acceptance_id']
