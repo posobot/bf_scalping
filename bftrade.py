@@ -5,25 +5,41 @@ import exchangeFunc
 import func
 from datetime import datetime
 from exchangeFunc import TIME_FRAME
+import yaml
+with open('config.yml', 'r') as yml:
+    config = yaml.load(yml)
 
 
-# ---- 1分足スキャbot用 ----
-SMA_COUNT = 7                           # 1分足何本分の平均価格を使うか
-NO_ENTRY_DIFF_FROM_SMA = 1500           # 平均価格と現在価格がこれだけ離れていたらNO ENTRY
-NO_ENTRY_DIFF_FROM_LATEST_MEDIAN = 1000  # 前回の足の中央値と現在価格がこれだけ離れていたらNO ENTRY
-ENTRY_DIFF = 100                        # エントリー価格(現在価格に±して使う)
-PROFIT_DIFF = 189                       # 利確幅
-STOP_LOSS_DIFF = 150                    # 損切り幅
-WAIT_AFTER_NOT_ENTRY = 15               # エントリー否定と損切り後に指定した秒数休憩
-WAIT_AFTER_ORDER_DONE = 10              # 利確・損切りした後再度エントリー判定を始めるまでの秒数
-WAIT_AFTER_CANCEL     = 10              # 注文をキャンセルしてから再度判定を始めるまでの秒数
-LOT = 0.001                             # 取引LOT[BTC]
+# ---- 1分足スキャbot用設定 ----
+SMA_COUNT                           = config['SMA_COUNT']                       # 1分足何本分の平均価格を使うか
+NO_ENTRY_DIFF_FROM_SMA              = config['NO_ENTRY_DIFF_FROM_SMA']          # 平均価格と現在価格がこれだけ離れていたらNO ENTRY
+NO_ENTRY_DIFF_FROM_LATEST_MEDIAN    = config['NO_ENTRY_DIFF_FROM_LATEST_MEDIAN']# 前回の足の中央値と現在価格がこれだけ離れていたらNO ENTRY
+ENTRY_DIFF                          = config['ENTRY_DIFF']                      # エントリー価格(現在価格に±して使う)
+PROFIT_DIFF                         = config['PROFIT_DIFF']                     # 利確幅
+STOP_LOSS_DIFF                      = config['STOP_LOSS_DIFF']                  # 損切り幅
+WAIT_AFTER_NOT_ENTRY                = config['WAIT_AFTER_NOT_ENTRY']            # エントリー否定と損切り後に指定した秒数休憩
+WAIT_AFTER_ORDER_DONE               = config['WAIT_AFTER_ORDER_DONE']           # 利確・損切りした後再度エントリー判定を始めるまでの秒数
+WAIT_AFTER_CANCEL                   = config['WAIT_AFTER_CANCEL']               # 注文をキャンセルしてから再度判定を始めるまでの秒数
+LOT                                 = config['LOT']                             # 取引LOT[BTC]
+LOOP_WAIT_SEC                       = config['LOOP_WAIT_SEC']                   # 何秒ごとにループを回すか（間隔が短すぎると怒られるので3秒ぐらいかな）
+ORDER_CANCEL_SEC                    = config['ORDER_CANCEL_SEC']                # オーダーを出してから何秒間約定しなければキャンセルするか
 
-
-# ---- 定数 ----
-LOOP_WAIT_SEC = 5  # 何秒ごとにループを回すか（間隔が短すぎると怒られるので3秒ぐらいかな）
-ORDER_CANCEL_SEC = 30   # オーダーを出してから何秒間約定しなければキャンセルするか
-STOP_LOSS_WAIT_SEC = 30  # 損切り後にwaitを入れる
+# debug出力
+dict = {
+    "SMA_COUNT" : SMA_COUNT,
+    "NO_ENTRY_DIFF_FROM_SMA" : NO_ENTRY_DIFF_FROM_SMA,
+    "NO_ENTRY_DIFF_FROM_LATEST_MEDIAN" : NO_ENTRY_DIFF_FROM_LATEST_MEDIAN,
+    "ENTRY_DIFF" : ENTRY_DIFF,
+    "PROFIT_DIFF" : PROFIT_DIFF,
+    "STOP_LOSS_DIFF" : STOP_LOSS_DIFF,
+    "WAIT_AFTER_NOT_ENTRY" : WAIT_AFTER_NOT_ENTRY,
+    "WAIT_AFTER_ORDER_DONE" : WAIT_AFTER_ORDER_DONE,
+    "WAIT_AFTER_CANCEL" : WAIT_AFTER_CANCEL,
+    "LOT" : LOT,
+    "LOOP_WAIT_SEC" : LOOP_WAIT_SEC,
+    "ORDER_CANCEL_SEC" : ORDER_CANCEL_SEC
+}
+func.print_format_bulk(dict)
 
 # ---- グローバル変数 ----
 order_id = ''  # オーダーID

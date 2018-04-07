@@ -2,22 +2,26 @@ import time
 import ccxt
 import requests
 import sys
-
-REAL_TRADE = 1 # 本番に繋ぐ時はこちら側だけ有効にする
-# REAL_TRADE = 0 # testnetに繋ぐ時はこちら側だけ有効にする
+import yaml
+with open('config.yml', 'r') as yml:
+    config = yaml.load(yml)
+ 
+print('exchange: ', config['exchange'])
+print('apikey: ', config['apikey'])
+print('secret: ', config['secret'])
 
 # 接続先
 EXCHANGE_BITMEX = 1
 EXCHANGE_BITFLYER = 2
-# TRADE_EXCHANGE = EXCHANGE_BITMEX  # BITMEXに接続
-TRADE_EXCHANGE = EXCHANGE_BITFLYER  # BITFLYERに接続
+
+REAL_TRADE = config['isreal'] # 本番に繋ぐかどうか
+TRADE_EXCHANGE = config['exchange']
 
 API_RETRY_MAX = 5   # API呼び出しretry上限回数
 RETRY_WAIT = 0.5    # APIの呼び出しで例外が発生した時のwait
 
 def is_bitmex():
     return TRADE_EXCHANGE == EXCHANGE_BITMEX
-    
     
 def is_bitflyer():
     return TRADE_EXCHANGE == EXCHANGE_BITFLYER
@@ -66,8 +70,8 @@ elif TRADE_EXCHANGE == EXCHANGE_BITFLYER:
 if REAL_TRADE == 0:
     # testnet
     exchange = ccxt.bitmex({
-        'apiKey': '',
-        'secret': '',
+        'apiKey': config['apikey'],
+        'secret': config['secret'],
     })
     # testnetを使うときのみ必要
     # これを書くと、'https://www.bitmex.com' → 'https://testnet.bitmex.com'に接続先が変わる
@@ -76,13 +80,13 @@ else:
     # 本番
     if TRADE_EXCHANGE == EXCHANGE_BITMEX:
         exchange = ccxt.bitmex({
-            'apiKey': '',
-            'secret': '',
+            'apiKey': config['apikey'],
+            'secret': config['secret'],
         })
     elif TRADE_EXCHANGE == EXCHANGE_BITFLYER:
         exchange = ccxt.bitflyer({
-            "apiKey": "",
-            "secret": ""
+            "apiKey": config['apikey'],
+            "secret": config['secret'],
         })
 
 

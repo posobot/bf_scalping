@@ -1,0 +1,35 @@
+# --- 取引所設定 ---
+isreal: # 本番=1, testnet=0 ※bitflyerは本番のみ
+    1
+exchange: # 取引所設定 'bitmex' = 1 , 'bitflyer' = 2
+    2
+apikey: 
+    ''
+secret: 
+    ''
+    
+# --- スキャbot設定 ---
+SMA_COUNT: 
+    3
+NO_ENTRY_DIFF_FROM_SMA:
+    1500
+NO_ENTRY_DIFF_FROM_LATEST_MEDIAN:
+    1000
+ENTRY_DIFF:
+    50
+PROFIT_DIFF:
+    200
+STOP_LOSS_DIFF:
+    200
+WAIT_AFTER_NOT_ENTRY:
+    5
+WAIT_AFTER_ORDER_DONE:
+    10
+WAIT_AFTER_CANCEL:
+    10
+LOT:
+    0.001
+LOOP_WAIT_SEC:
+    5
+ORDER_CANCEL_SEC:
+    30
