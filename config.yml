@@ -2,11 +2,11 @@
 SMA_COUNT:                          # 1分足何本分の平均価格を使うか
     3
 NO_ENTRY_DIFF_FROM_SMA:             # 平均価格と現在価格がこれだけ離れていたらNO ENTRY
-    6500
+    650
 NO_ENTRY_DIFF_FROM_LATEST_MEDIAN:   # 前回の足の中央値と現在価格がこれだけ離れていたらNO ENTRY
-    4500
+    450
 ENTRY_DIFF:                         # エントリー価格(現在価格に±して使う)
-    -100
+    0
 PROFIT_DIFF:                        # 利確幅
     200
 STOP_LOSS_DIFF:                     # 損切り幅
@@ -18,7 +18,7 @@ WAIT_AFTER_ORDER_DONE:              # 利確・損切りした後再度エント
 WAIT_AFTER_CANCEL:                  # 注文をキャンセルしてから再度判定を始めるまでの秒数
     1
 LOT:                                # 取引LOT[BTC]
-    0.001
+    0.01
 LOOP_WAIT_SEC:                      # 何秒ごとにループを回すか（間隔が短すぎると怒られるので3秒ぐらいかな）
     1
 ORDER_CANCEL_SEC:                   # オーダーを出してから何秒間約定しなければキャンセルするか

@@ -29,6 +29,7 @@ ORDER_CANCEL_SEC                    = config['ORDER_CANCEL_SEC']                
 order_id = ''  # オーダーID
 wait_order_count = 0  # 注文を出してから、ループ何回分役定していないか
 is_order_success = False
+is_ordered_limit = False # 成行でポジション解消を行ったか、実際にポジションが解消されるまでTrueにして使う
 # ---- 関数 ----
 
 
@@ -56,13 +57,16 @@ def cancel_all_orders():
     exchangeFunc.cancel_all_orders()
     
     # すこし時間を置いてからオーダーの解消判定
-    time.sleep(0.5)
+    time.sleep(1)
     # もしポジションを持っていたら成行で解消
     order_size = exchangeFunc.get_current_order_size()
+    global is_ordered_limit
     if order_size > 0:
+        is_ordered_limit = True
         func.print_format("--- 成行売りでポジション解消:" + str(order_size) + "---")
         exchangeFunc.market_sell(abs(order_size))
     elif order_size < 0:
+        is_ordered_limit = True
         func.print_format("--- 成行買いでポジション解消:" + str(order_size) + "---")
         exchangeFunc.market_buy(abs(order_size))
     
@@ -158,12 +162,21 @@ while True:
     open_order_count = exchangeFunc.fetch_open_orders()
     order_size = exchangeFunc.get_current_order_size()
     
+    if is_ordered_limit == True:
+        if order_size == 0:
+            # 成行でのポジション解消が実行された
+            is_ordered_limit = False
+        else:
+            time.sleep(LOOP_WAIT_SEC)
+            continue
+    
     if open_order_count == 0 and order_size != 0:
-        # 縦玉注文だけが残っている状態を解消
-        func.print_format("--- 縦玉注文だけが残っている状態を解消 ---")
-        cancel_all_orders()
-        time.sleep(LOOP_WAIT_SEC)
-        continue
+        if is_ordered_limit == False:
+            # 建玉注文だけが残っている状態を解消
+            func.print_format("--- 建玉注文だけが残っている状態を解消 ---")
+            cancel_all_orders()
+            time.sleep(LOOP_WAIT_SEC)
+            continue
 
     if is_order_success == False and order_size != 0:
         # 注文が通った
